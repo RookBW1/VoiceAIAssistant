@@ -1,0 +1,25 @@
+[
+  {
+    "order_id": "ORD123",
+    "user_id": "U1",
+    "status": "delivered",
+    "item": "Wireless Headphones",
+    "delivery_date": "2026-05-20",
+    "return_window_days": 7
+  },
+  {
+    "order_id": "ORD124",
+    "user_id": "U1",
+    "status": "in_transit",
+    "item": "Running Shoes",
+    "expected_delivery": "2026-06-10"
+  },
+  {
+    "order_id": "ORD125",
+    "user_id": "U2",
+    "status": "delivered",
+    "item": "Smart Watch",
+    "delivery_date": "2026-05-10",
+    "return_window_days": 7
+  }
+]
