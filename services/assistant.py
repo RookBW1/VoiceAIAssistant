@@ -1,15 +1,22 @@
 import os
 import json
-from openai import OpenAI
+import speech_recognition as sr
+import pyttsx3
+from google import genai
+from google.genai import types
 from dotenv import load_dotenv
 
 load_dotenv()
 
 class VoiceAssistantEngine:
     def __init__(self):
-        # Initializes the OpenAI client using the API key from your .env file
-        self.client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        # Configure the brand-new, updated Google GenAI Client
+        self.client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+        self.model_name = 'gemini-1.5-flash'
         self.load_context_data()
+        
+        # Initialize the completely offline local TTS engine
+        self.tts_engine = pyttsx3.init()
 
     def load_context_data(self):
         """Loads the static JSON files to inject into the LLM system prompt as the source of truth."""
@@ -19,20 +26,21 @@ class VoiceAssistantEngine:
             self.policies = json.load(f)
 
     def speech_to_text(self, audio_file_path: str) -> str:
-        """Converts user speech audio file into clear text via Whisper."""
+        """Converts user speech audio file into clear text using free local speech recognition."""
+        recognizer = sr.Recognizer()
         try:
-            with open(audio_file_path, "rb") as audio_file:
-                transcript = self.client.audio.transcriptions.create(
-                    model="whisper-1", 
-                    file=audio_file
-                )
-            return transcript.text
+            with sr.AudioFile(audio_file_path) as source:
+                audio_data = recognizer.record(source)
+            # Uses Google's free public web service to transcribe
+            text = recognizer.recognize_google(audio_data)
+            return text
+        except sr.UnknownValueError:
+            return "Error: Could not understand the audio speech."
         except Exception as e:
             raise RuntimeError(f"STT Stage Failed: {str(e)}")
 
     def generate_llm_response(self, user_text: str) -> str:
-        """Processes the query against static database context via an LLM."""
-        # Anchoring the date explicitly to match our dataset metrics dynamically
+        """Processes the query against static database context via Gemini's New SDK Free Tier."""
         system_prompt = f"""
         You are an elite, crisp, and empathetic E-commerce Voice Support Assistant. 
         Your primary directive is to answer user queries strictly using the provided Dataset below.
@@ -49,26 +57,25 @@ class VoiceAssistantEngine:
         """
 
         try:
-            response = self.client.chat.completions.create(
-                model="gpt-4o-mini", # High-speed, low latency, ideal for Voice applications
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_text}
-                ],
-                temperature=0.2 # Low temperature ensures strict compliance, no random hallucinations
+            # Set temperature low using the new GenerateContentConfig structure to prevent hallucinations
+            config = types.GenerateContentConfig(
+                system_instruction=system_prompt,
+                temperature=0.2
             )
-            return response.choices[0].message.content
+            
+            response = self.client.models.generate_content(
+                model=self.model_name,
+                contents=user_text,
+                config=config
+            )
+            return response.text
         except Exception as e:
             raise RuntimeError(f"LLM Processing Stage Failed: {str(e)}")
 
     def text_to_speech(self, text_input: str, output_audio_path: str):
-        """Synthesizes the text response back into high-fidelity voice audio."""
+        """Synthesizes the text response back into local audio file offline for free."""
         try:
-            response = self.client.audio.speech.create(
-                model="tts-1",
-                voice="alloy", # Neutral, professional conversational voice tone
-                input=text_input
-            )
-            response.stream_to_file(output_audio_path)
+            self.tts_engine.save_to_file(text_input, output_audio_path)
+            self.tts_engine.runAndWait()
         except Exception as e:
             raise RuntimeError(f"TTS Stage Failed: {str(e)}")
