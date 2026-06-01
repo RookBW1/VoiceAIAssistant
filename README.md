@@ -12,38 +12,44 @@ Ensure you have Python 3.9 through Python 3.12 installed. Clone this repository,
 ```bash
 # Navigate to workspace
 cd VoiceAIAssistant
+```
 
 # Initialize and activate environment
+```bash
 python3 -m venv venv
 source venv/Scripts/activate  # On Windows Git Bash: source venv/Scripts/activate
-
+```
 
 ### 2. Dependency Installation
 Install the required open-source and free-tier compliant library ecosystem:
 
 ```bash
 pip install -r requirements.txt
+```
 
-
-###3. Environment Configuration
+### 3. Environment Configuration
 Create a .env file in the root directory to store your free Google AI Studio developer credentials:
 
-code snippet
+```bash
 GEMINI_API_KEY=your_free_gemini_api_key_here
+```
 
-###4. Running the Architecture
+### 4. Running the Architecture
 The system is built as a microservice framework separating the processing core from the interface. Open two separate terminal windows with your virtual environment activated:
 
 Terminal 1 (FastAPI Engine Backend - Port 8000):
+```bash
 uvicorn main:app --reload --port 8000
+```
 
 Terminal 2 (Streamlit GUI Interface - Port 8501):
+```bash
 streamlit run app.py
-
+```
 
 ---
 
-## ⚖️ Design Decisions & Trade-offs
+## Design Decisions & Trade-offs
 
 **Strategic Selection of Gemini 2.5 Flash Engine**
 We deliberately chose to implement the Gemini 2.5 Flash model over larger foundational models to optimize for First Token Latency (FTL). In interactive voice support applications, response velocity carries a significantly higher user experience weight than deep academic reasoning capabilities. While a larger model might offer marginal improvements in complex reasoning, the resulting network latency would break the natural cadence of a voice conversation. Gemini 2.5 Flash strikes the perfect balance by delivering near-instantaneous responses while maintaining accurate contextual comprehension.
@@ -103,6 +109,6 @@ Remediation: Refactored services/assistant.py to leverage the modern from google
 Challenge 3: Asynchronous Web Context Thread Blocking (HTTP 500 Error)
 Error Message Encountered: "POST /api/process-voice-support HTTP/1.1" 500 Internal Server Error
 
-Root Cause Analysis: Offline operating-system-level speech synthesis engines (like pyttsx3) require direct access to the host computer's main thread loop. When executed inside FastAPI's asynchronous request worker threads, it induced deadlocks, throwing generic 500 failures to the Streamlit layer.
+Root Cause Analysis: Offline operating-system-level speech synthesis engines (like pyttsx3) require direct access to the host computer's main thread loop. When executed inside FastAPI's asynchronous request worker threads, it induced deadlocks, throwing generic 500 failures to the Streamlit layer
 
-Remediation: Abstracted the audio generation stage out of the local OS layer by introducing gTTS (Google Text-to-Speech). This moved file rendering to a reliable, lightweight I/O transaction that handles binary file tracking beautifully within web workers.
+Remediation: Abstracted the audio generation stage out of the local OS layer by introducing gTTS (Google Text-to-Speech). This moved file rendering to a reliable, lightweight I/O transaction that handles binary file tracking beautifully within web workers
